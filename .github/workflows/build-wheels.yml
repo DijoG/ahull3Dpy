@@ -53,19 +53,31 @@ jobs:
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           
+          # Windows environment
           CIBW_ENVIRONMENT_WINDOWS: >-
             CGAL_INCLUDE_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\include
             GMP_LIBRARY_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\lib
           
+          # macOS environment
           CIBW_ENVIRONMENT_MACOS: >-
             CGAL_INCLUDE_PATH=/opt/homebrew/include
           
+          # Linux environment - needed for the manylinux container
+          CIBW_ENVIRONMENT_LINUX: >-
+            CGAL_INCLUDE_PATH=/usr/include
+            CPLUS_INCLUDE_PATH=/usr/include
+          
+          # Linux: Install CGAL in the manylinux container
           CIBW_BEFORE_ALL_LINUX: |
+            # Install EPEL and dependencies
             yum install -y epel-release
-            yum install -y eigen3-devel python3-devel
-            yum install -y cgal-devel || echo "CGAL not in yum, installing from source..."
+            yum install -y eigen3-devel python3-devel cmake make wget gcc-c++
+            
+            # Try to install CGAL from EPEL
+            yum install -y cgal-devel || echo "CGAL not in EPEL, building from source..."
+            
+            # If CGAL not found, build from source
             if ! yum list installed cgal-devel 2>/dev/null; then
-              yum install -y cmake make wget gcc-c++
               cd /tmp
               wget https://github.com/CGAL/cgal/releases/download/v6.0/CGAL-6.0.tar.gz
               tar -xzf CGAL-6.0.tar.gz
@@ -74,7 +86,18 @@ jobs:
               cmake --build build --target install -j4
               cd / && rm -rf /tmp/CGAL-6.0*
             fi
+            
+            # Create symlink so the compiler can find it
+            if [ -d "/usr/local/include/CGAL" ] && [ ! -d "/usr/include/CGAL" ]; then
+              ln -s /usr/local/include/CGAL /usr/include/CGAL
+            fi
+            
+            # Verify CGAL is installed
+            echo "=== CGAL installation verification ==="
+            ls -la /usr/include/CGAL/ | head -20 || echo "CGAL not found in /usr/include"
+            ls -la /usr/local/include/CGAL/ | head -20 || echo "CGAL not found in /usr/local/include"
           
+          # Before build for all platforms
           CIBW_BEFORE_BUILD: >-
             pip install pybind11 numpy scipy
 

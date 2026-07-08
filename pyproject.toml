@@ -9,11 +9,12 @@ description = "Fast 3D Alpha Hull with Label Propagation"
 readme = "README.md"
 requires-python = ">=3.7"
 authors = [{name = "Gergo Dioszegi", email = "dijogergo@gmail.com"}]
-license = {text = "MIT"}
+license = "MIT"  # Use a simple string, not a table
 dependencies = [
     "numpy>=1.20.0",
     "scipy>=1.7.0",
 ]
+# Move classifiers to a separate file or remove from setup.py
 
 [project.urls]
 Homepage = "https://github.com/DijoG/ahull3Dpy"
