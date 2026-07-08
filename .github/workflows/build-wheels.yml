@@ -1,20 +1,26 @@
-name: Build and publish wheels
+name: Build wheels
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+  build:
+    name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false  # Don't cancel other builds if one fails
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-22.04, windows-latest, macos-13]
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Install CGAL (Linux)
         if: runner.os == 'Linux'
@@ -25,7 +31,8 @@ jobs:
       - name: Install CGAL (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install cgal eigen
+          brew update || true
+          brew install cgal eigen || true
 
       - name: Install CGAL (Windows)
         if: runner.os == 'Windows'
@@ -35,18 +42,25 @@ jobs:
           .\bootstrap-vcpkg.bat
           .\vcpkg install cgal:x64-windows
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
-        env:
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-          CIBW_SKIP: "*-win32 *-manylinux_i686"
-          CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_ARCHS_WINDOWS: "AMD64"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_ENVIRONMENT_WINDOWS: >-
-            CGAL_INCLUDE_PATH=${{ github.workspace }}/vcpkg/installed/x64-windows/include
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy pybind11 setuptools wheel
+
+      - name: Build extension
+        run: |
+          python setup.py build_ext --inplace
+
+      - name: Test import
+        run: |
+          python -c "import ahull3Dpy_core; print('✅ Core module works!')"
+
+      - name: Build wheel
+        run: |
+          python setup.py bdist_wheel
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          name: wheel-${{ matrix.os }}
+          path: dist/*.whl
+          
