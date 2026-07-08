@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.dll
+*.dylib
+*.o
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Compiled C++ extensions
+ahull3Dpy_core.so
+ahull3Dpy_core.pyd
+ahull3Dpy_core.dylib
+*.pyc
+
+# vcpkg (Windows)
+vcpkg/
+
+# IDE
+.idea/
+*.swp
+*.swo

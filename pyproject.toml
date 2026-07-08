@@ -1,0 +1,11 @@
+[project]
+name = "ahull3Dpy"
+version = "1.0.0"
+description = "Fast 3D Alpha Hull with Label Propagation"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}  # This references the LICENSE file
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.7.0",
+]
