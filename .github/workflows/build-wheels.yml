@@ -22,12 +22,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install CGAL (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcgal-dev libeigen3-dev
-
       - name: Install CGAL (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -59,9 +53,21 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: >-
             CGAL_INCLUDE_PATH=/opt/homebrew/include
           
-          # Linux: CGAL is in standard path
-          CIBW_ENVIRONMENT_LINUX: >-
-            CGAL_INCLUDE_PATH=/usr/include
+          # Linux: Manylinux container needs CGAL installed
+          CIBW_BEFORE_ALL_LINUX: |
+            yum install -y epel-release
+            yum install -y eigen3-devel
+            yum install -y cgal-devel || echo "CGAL not in yum, installing from source..."
+            if ! yum list installed cgal-devel 2>/dev/null; then
+              yum install -y cmake make wget gcc-c++
+              cd /tmp
+              wget https://github.com/CGAL/cgal/releases/download/v6.0/CGAL-6.0.tar.gz
+              tar -xzf CGAL-6.0.tar.gz
+              cd CGAL-6.0
+              cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local
+              cmake --build build --target install -j4
+              cd / && rm -rf /tmp/CGAL-6.0*
+            fi
           
           CIBW_BEFORE_BUILD: >-
             pip install pybind11 numpy scipy

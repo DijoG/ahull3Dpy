@@ -72,13 +72,8 @@ def get_compile_args():
 
 def get_libraries():
     """Get platform-specific libraries to link"""
-    # CGAL is header-only on Linux and macOS
-    if sys.platform == 'win32':
-        # Windows might need CGAL libraries
-        return ['CGAL']
-    else:
-        # Linux/macOS: CGAL is header-only
-        return []
+    # CGAL is header-only on ALL platforms - don't link against it!
+    return []  # Always empty
 
 # Get CGAL include path
 cgal_include = get_cgal_include()
