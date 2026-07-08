@@ -1,4 +1,3 @@
-// src/ahull3Dpy_core.cpp
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
@@ -78,24 +77,23 @@ fas_cpp_with_labels(py::array_t<double> pts, double alpha,
     if (nfacets == 0) {
         py::print("Warning: No facets found in alpha shape");
         return std::make_tuple(
-            py::array_t<double>({0, 3}),
-            py::array_t<double>(0),
+            py::array_t<double>(),
+            py::array_t<double>(),
             std::map<std::string, double>()
         );
     }
     
-    // Output arrays - each facet has 3 vertices, each vertex has 3 coords
+    // Output arrays
     std::vector<double> vertices;
     std::vector<double> vertex_labels;
-    vertices.reserve(nfacets * 9);  // 3 vertices * 3 coords
-    vertex_labels.reserve(nfacets * 3);  // 3 labels per facet
+    vertices.reserve(nfacets * 9);
+    vertex_labels.reserve(nfacets * 3);
     
     std::list<Facet>::iterator it_facet;
     
     for(it_facet = facets.begin(); it_facet != facets.end(); it_facet++) {
         Facet facet = *it_facet;
         
-        // to have a consistent orientation, always consider an exterior cell
         if(as.classify(facet.first) != Fixed_alpha_shape_3::EXTERIOR) {
             facet = as.mirror_facet(facet);
         }
@@ -106,7 +104,6 @@ fas_cpp_with_labels(py::array_t<double> pts, double alpha,
             (facet.second + 3) % 4,
         };
         
-        // needed to get a consistent orientation
         if(facet.second % 2 == 0) {
             std::swap(indices[0], indices[1]);
         }
@@ -115,14 +112,12 @@ fas_cpp_with_labels(py::array_t<double> pts, double alpha,
         const Point3 v2 = facet.first->vertex(indices[1])->point();
         const Point3 v3 = facet.first->vertex(indices[2])->point();
         
-        // Store vertices (as 3 separate vertices, not triangles)
         auto assign_label = [&](const Point3& p) -> double {
             auto it = point_to_label.find(p);
             if(it != point_to_label.end()) {
                 return it->second;
             }
             
-            // Fallback: nearest neighbor search
             double min_dist = std::numeric_limits<double>::max();
             double label = std::numeric_limits<double>::quiet_NaN();
             
@@ -141,28 +136,44 @@ fas_cpp_with_labels(py::array_t<double> pts, double alpha,
             return label;
         };
         
-        // Add v1
         vertices.push_back(v1.x());
         vertices.push_back(v1.y());
         vertices.push_back(v1.z());
         vertex_labels.push_back(assign_label(v1));
         
-        // Add v2
         vertices.push_back(v2.x());
         vertices.push_back(v2.y());
         vertices.push_back(v2.z());
         vertex_labels.push_back(assign_label(v2));
         
-        // Add v3
         vertices.push_back(v3.x());
         vertices.push_back(v3.y());
         vertices.push_back(v3.z());
         vertex_labels.push_back(assign_label(v3));
     }
     
-    // Convert to numpy arrays
-    py::array_t<double> vertices_array({(size_t)vertices.size()/3, 3}, vertices.data());
-    py::array_t<double> vertex_labels_array(vertex_labels.size(), vertex_labels.data());
+    // FIXED: Create numpy arrays using buffer_info
+    py::array_t<double> vertices_array = py::array_t<double>(
+        py::buffer_info(
+            vertices.data(),
+            sizeof(double),
+            py::format_descriptor<double>::format(),
+            2,
+            { vertices.size()/3, 3 },
+            { sizeof(double) * 3, sizeof(double) }
+        )
+    );
+    
+    py::array_t<double> vertex_labels_array = py::array_t<double>(
+        py::buffer_info(
+            vertex_labels.data(),
+            sizeof(double),
+            py::format_descriptor<double>::format(),
+            1,
+            { vertex_labels.size() },
+            { sizeof(double) }
+        )
+    );
     
     // Volume computation
     std::map<std::string, double> volume_data;
@@ -204,7 +215,7 @@ fas_cpp_with_labels(py::array_t<double> pts, double alpha,
     return std::make_tuple(vertices_array, vertex_labels_array, volume_data);
 }
 
-PYBIND11_MODULE(core, m) {
+PYBIND11_MODULE(ahull3Dpy_core, m) {
     m.doc() = "Fast 3D Alpha Hull with Label Propagation (C++ core)";
     m.def("fas_cpp_with_labels", &fas_cpp_with_labels, 
           "Compute alpha hull with label propagation",
