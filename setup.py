@@ -1,43 +1,26 @@
 from setuptools import setup, Extension
 import pybind11
-import os
 import sys
-import subprocess
+import os
 
 def get_cgal_include():
-    """Find CGAL include path on different platforms"""
-    # Try environment variable first
-    env_path = os.environ.get('CGAL_INCLUDE_PATH')
-    if env_path and os.path.exists(env_path):
-        return env_path
-    
-    # Common paths
-    paths = [
-        '/usr/include',
-        '/usr/local/include',
-        '/opt/homebrew/include',
-        '/usr/include/x86_64-linux-gnu',
-    ]
-    
-    for path in paths:
-        cgal_path = os.path.join(path, 'CGAL')
-        if os.path.exists(cgal_path):
-            return path
-    
-    # Try pkg-config
-    try:
-        result = subprocess.run(
-            ['pkg-config', '--cflags-only-I', 'CGAL'],
-            capture_output=True, text=True
-        )
-        if result.returncode == 0:
-            for flag in result.stdout.split():
-                if flag.startswith('-I'):
-                    return flag[2:]
-    except:
-        pass
-    
-    # Fallback: let the compiler find it
+    """Find CGAL include path"""
+    if sys.platform == 'linux':
+        paths = [
+            '/usr/include',
+            '/usr/include/x86_64-linux-gnu',
+            '/usr/local/include',
+        ]
+        for path in paths:
+            if os.path.exists(os.path.join(path, 'CGAL')):
+                return path
+    elif sys.platform == 'darwin':
+        paths = ['/opt/homebrew/include', '/usr/local/include']
+        for path in paths:
+            if os.path.exists(os.path.join(path, 'CGAL')):
+                return path
+    elif sys.platform == 'win32':
+        return os.environ.get('CGAL_INCLUDE_PATH', 'C:/vcpkg/installed/x64-windows/include')
     return ''
 
 ext_modules = [
@@ -49,8 +32,9 @@ ext_modules = [
             get_cgal_include(),
         ],
         language='c++',
-        extra_compile_args=['-std=c++17', '-O3'],
-        libraries=['CGAL'] if sys.platform != 'win32' else [],
+        extra_compile_args=['-std=c++17', '-O3', '-Wall'],
+        # CGAL is header-only on Linux
+        libraries=[] if sys.platform == 'linux' else ['CGAL'],
     ),
 ]
 
@@ -60,7 +44,6 @@ setup(
     description='Fast 3D Alpha Hull with Label Propagation',
     author='Gergo Dioszegi',
     author_email='dijogergo@gmail.com',
-    url='https://github.com/DijoG/ahull3Dpy',
     packages=['ahull3Dpy'],
     ext_modules=ext_modules,
     install_requires=[

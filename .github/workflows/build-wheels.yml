@@ -20,16 +20,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libcgal-dev libeigen3-dev g++ cmake
-          # Verify CGAL is installed
-          ls -la /usr/include/CGAL/ | head -20
+          echo "=== CGAL installed at: ==="
+          find /usr -name "CGAL" -type d 2>/dev/null
+          echo "=== CGAL version: ==="
+          cat /usr/include/CGAL/version.h | grep VERSION || echo "Version file not found"
 
       - name: Install Python packages
         run: |
           pip install numpy scipy pybind11 setuptools wheel
 
-      - name: Try to compile (verbose)
+      - name: Try to compile (show full error)
         run: |
-          python setup.py build_ext --inplace -v
+          echo "=== Starting compilation ==="
+          python setup.py build_ext --inplace -v 2>&1 | tee build_output.log
+          echo "=== Compilation finished ==="
+          echo ""
+          echo "=== Checking for errors ==="
+          grep -i "error" build_output.log || echo "No errors found in log"
+          echo ""
+          echo "=== Checking for generated files ==="
+          ls -la *.so 2>/dev/null || echo "No .so file found"
+          
+      - name: Show full build log if failed
+        if: failure()
+        run: |
+          echo "=== FULL BUILD LOG ==="
+          cat build_output.log
           
       - name: Check if compilation succeeded
         run: |
@@ -38,7 +54,8 @@ jobs:
             python -c "import ahull3Dpy_core; print('✅ Import works!')"
           else
             echo "❌ FAILED! No compiled extension found."
-            echo "Checking for error logs..."
-            find . -name "*.log" -exec cat {} \;
+            echo ""
+            echo "=== LAST 50 LINES OF BUILD LOG ==="
+            tail -50 build_output.log
             exit 1
           fi
