@@ -1,11 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "pybind11>=2.10.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ahull3Dpy"
 version = "1.0.0"
 description = "Fast 3D Alpha Hull with Label Propagation"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {file = "LICENSE"}  # This references the LICENSE file
+authors = [{name = "Gergo Dioszegi", email = "dijogergo@gmail.com"}]
+license = {text = "MIT"}
 dependencies = [
     "numpy>=1.20.0",
     "scipy>=1.7.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/DijoG/ahull3Dpy"
+Repository = "https://github.com/DijoG/ahull3Dpy"
+Issues = "https://github.com/DijoG/ahull3Dpy/issues"
+
+[tool.cibuildwheel]
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*"]
+skip = ["*-win32", "*-manylinux_i686"]
