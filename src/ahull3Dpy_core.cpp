@@ -152,28 +152,27 @@ fas_cpp_with_labels(py::array_t<double> pts, double alpha,
         vertex_labels.push_back(assign_label(v3));
     }
     
-    // FIXED: Create numpy arrays using buffer_info
-    py::array_t<double> vertices_array = py::array_t<double>(
-        py::buffer_info(
-            vertices.data(),
-            sizeof(double),
-            py::format_descriptor<double>::format(),
-            2,
-            { vertices.size()/3, 3 },
-            { sizeof(double) * 3, sizeof(double) }
-        )
+    // CORRECTED: Create numpy arrays using buffer_info
+    py::buffer_info vertices_info(
+        vertices.data(),
+        sizeof(double),
+        py::format_descriptor<double>::format(),
+        2,
+        { (py::ssize_t)(vertices.size() / 3), (py::ssize_t)3 },
+        { (py::ssize_t)(sizeof(double) * 3), (py::ssize_t)sizeof(double) }
     );
     
-    py::array_t<double> vertex_labels_array = py::array_t<double>(
-        py::buffer_info(
-            vertex_labels.data(),
-            sizeof(double),
-            py::format_descriptor<double>::format(),
-            1,
-            { vertex_labels.size() },
-            { sizeof(double) }
-        )
+    py::buffer_info labels_info(
+        vertex_labels.data(),
+        sizeof(double),
+        py::format_descriptor<double>::format(),
+        1,
+        { (py::ssize_t)vertex_labels.size() },
+        { (py::ssize_t)sizeof(double) }
     );
+    
+    py::array_t<double> vertices_array(vertices_info);
+    py::array_t<double> vertex_labels_array(labels_info);
     
     // Volume computation
     std::map<std::string, double> volume_data;
