@@ -2,20 +2,43 @@ from setuptools import setup, Extension
 import pybind11
 import os
 import sys
+import subprocess
 
 def get_cgal_include():
-    """Get CGAL include path for different platforms"""
-    if sys.platform == 'win32':
-        return os.environ.get('CGAL_INCLUDE_PATH', 'C:/vcpkg/installed/x64-windows/include')
-    elif sys.platform == 'darwin':
-        # macOS: try Homebrew paths
-        paths = ['/opt/homebrew/include', '/usr/local/include']
-        for path in paths:
-            if os.path.exists(os.path.join(path, 'CGAL')):
-                return path
-        return '/opt/homebrew/include'  # default
-    else:  # Linux
-        return '/usr/include'
+    """Find CGAL include path on different platforms"""
+    # Try environment variable first
+    env_path = os.environ.get('CGAL_INCLUDE_PATH')
+    if env_path and os.path.exists(env_path):
+        return env_path
+    
+    # Common paths
+    paths = [
+        '/usr/include',
+        '/usr/local/include',
+        '/opt/homebrew/include',
+        '/usr/include/x86_64-linux-gnu',
+    ]
+    
+    for path in paths:
+        cgal_path = os.path.join(path, 'CGAL')
+        if os.path.exists(cgal_path):
+            return path
+    
+    # Try pkg-config
+    try:
+        result = subprocess.run(
+            ['pkg-config', '--cflags-only-I', 'CGAL'],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            for flag in result.stdout.split():
+                if flag.startswith('-I'):
+                    return flag[2:]
+    except:
+        pass
+    
+    # Fallback: let the compiler find it
+    return ''
 
 ext_modules = [
     Extension(
