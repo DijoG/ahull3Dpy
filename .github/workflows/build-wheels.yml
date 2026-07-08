@@ -41,7 +41,6 @@ jobs:
           cd vcpkg
           .\bootstrap-vcpkg.bat
           .\vcpkg install cgal:x64-windows
-          echo "CGAL_INCLUDE_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\include" >> $env:GITHUB_ENV
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
@@ -51,8 +50,19 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
+          
+          # Windows: Pass CGAL path
           CIBW_ENVIRONMENT_WINDOWS: >-
             CGAL_INCLUDE_PATH=${{ github.workspace }}\vcpkg\installed\x64-windows\include
+          
+          # macOS: CGAL is in Homebrew path
+          CIBW_ENVIRONMENT_MACOS: >-
+            CGAL_INCLUDE_PATH=/opt/homebrew/include
+          
+          # Linux: CGAL is in standard path
+          CIBW_ENVIRONMENT_LINUX: >-
+            CGAL_INCLUDE_PATH=/usr/include
+          
           CIBW_BEFORE_BUILD: >-
             pip install pybind11 numpy scipy
 
