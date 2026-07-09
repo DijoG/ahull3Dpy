@@ -89,28 +89,25 @@ def get_compile_args():
         return ['-std=c++17', '-O3', '-Wall']
 
 def get_libraries():
-    """Get platform-specific libraries to link"""
+    """
+    CGAL depends on GMP and MPFR on ALL platforms.
+    These libraries are needed for exact arithmetic in CGAL.
+    """
+    # All platforms need GMP and MPFR
+    libraries = ['gmp', 'mpfr']
+    
+    # Windows may have different naming in conda
     if sys.platform == 'win32':
-        # Windows needs GMP and MPFR for CGAL
-        # CGAL itself is header-only, but it depends on these
-        libraries = ['gmp', 'mpfr']
-        
-        # Check if we're in a conda environment
         conda_prefix = os.environ.get('CONDA_PREFIX')
         if conda_prefix:
-            # In conda, the libraries might have different names
             lib_dir = os.path.join(conda_prefix, 'Library/lib')
             if os.path.exists(lib_dir):
-                # Check if conda uses different naming
                 if os.path.exists(os.path.join(lib_dir, 'libgmp.lib')):
                     return ['libgmp', 'libmpfr']
                 elif os.path.exists(os.path.join(lib_dir, 'gmp.lib')):
                     return ['gmp', 'mpfr']
-        
-        return libraries
-    else:
-        # Linux/macOS: CGAL is header-only, no linking needed
-        return []
+    
+    return libraries
 
 def get_library_dirs():
     """Get platform-specific library directories"""
