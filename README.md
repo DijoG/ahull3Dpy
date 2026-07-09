@@ -72,7 +72,7 @@ print(f"Vertex labels: {mesh['input_truth']}")     # Point IDs for each hull ver
 print(f"Face labels: {mesh['face_truth']}")        # Point IDs for each face vertex
 print(f"Unique point IDs: {np.unique(mesh['input_truth'])}")  # Should be [1, 2, 3]
 ```
-### WIth Volume Computation
+### With Volume Computation
 ```python
 # Compute hull with volume
 mesh = ahull3D(pts, alpha=0.8, volume=True)
