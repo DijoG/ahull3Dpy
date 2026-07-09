@@ -46,6 +46,7 @@ jobs:
   build_linux:
     name: Build Linux wheels (Ubuntu)
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12']
