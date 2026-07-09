@@ -6,24 +6,21 @@ import os
 def get_cgal_include():
     """Find CGAL include path on different platforms"""
     
-    # First check environment variable (set by cibuildwheel or user)
+    # First check environment variable
     env_path = os.environ.get('CGAL_INCLUDE_PATH')
     if env_path and os.path.exists(env_path):
         return env_path
     
     # Platform-specific paths
     if sys.platform == 'win32':
-        # Windows: vcpkg default paths
         paths = [
             'C:/vcpkg/installed/x64-windows/include',
             'D:/vcpkg/installed/x64-windows/include',
         ]
-        # Check GitHub Actions workspace path
         github_workspace = os.environ.get('GITHUB_WORKSPACE')
         if github_workspace:
             paths.insert(0, os.path.join(github_workspace, 'vcpkg/installed/x64-windows/include'))
         
-        # Check conda environment
         conda_prefix = os.environ.get('CONDA_PREFIX')
         if conda_prefix:
             paths.insert(0, os.path.join(conda_prefix, 'Library/include'))
@@ -33,12 +30,10 @@ def get_cgal_include():
                 return path
                 
     elif sys.platform == 'darwin':
-        # macOS: Homebrew paths
         paths = [
             '/opt/homebrew/include',  # Apple Silicon
             '/usr/local/include',      # Intel
         ]
-        # Check conda environment
         conda_prefix = os.environ.get('CONDA_PREFIX')
         if conda_prefix:
             paths.insert(0, os.path.join(conda_prefix, 'include'))
@@ -48,13 +43,11 @@ def get_cgal_include():
                 return path
                 
     else:  # Linux
-        # Ubuntu/Debian paths
         paths = [
             '/usr/include',
             '/usr/local/include',
             '/usr/include/x86_64-linux-gnu',
         ]
-        # Check conda environment
         conda_prefix = os.environ.get('CONDA_PREFIX')
         if conda_prefix:
             paths.insert(0, os.path.join(conda_prefix, 'include'))
@@ -63,21 +56,15 @@ def get_cgal_include():
             if os.path.exists(os.path.join(path, 'CGAL')):
                 return path
     
-    # If CGAL not found, print helpful message
     print("=" * 60)
     print("WARNING: CGAL not found!")
     print("Please install CGAL before building:")
     if sys.platform == 'win32':
         print("  Windows: vcpkg install cgal:x64-windows")
-        print("  Or: conda install -c conda-forge cgal")
-        print("  Set CGAL_INCLUDE_PATH to the include directory")
     elif sys.platform == 'darwin':
         print("  macOS: brew install cgal eigen")
-        print("  Or: conda install -c conda-forge cgal")
     else:
-        print("  Ubuntu/Debian: sudo apt-get install libcgal-dev eigen3-dev python3-dev")
-        print("  RHEL/CentOS: sudo yum install cgal-devel eigen3-devel python3-devel")
-        print("  Or: conda install -c conda-forge cgal")
+        print("  Ubuntu/Debian: sudo apt-get install libcgal-dev libgmp-dev libmpfr-dev")
     print("=" * 60)
     return ''
 
@@ -91,9 +78,7 @@ def get_compile_args():
 def get_libraries():
     """
     CGAL depends on GMP and MPFR on ALL platforms.
-    These libraries are needed for exact arithmetic in CGAL.
     """
-    # All platforms need GMP and MPFR
     libraries = ['gmp', 'mpfr']
     
     # Windows may have different naming in conda
@@ -114,12 +99,11 @@ def get_library_dirs():
     library_dirs = []
     
     if sys.platform == 'win32':
-        # Check environment variable first
+        # Windows: vcpkg or conda paths
         env_path = os.environ.get('GMP_LIBRARY_PATH')
         if env_path and os.path.exists(env_path):
             library_dirs.append(env_path)
         
-        # Check vcpkg paths
         paths = [
             'C:/vcpkg/installed/x64-windows/lib',
             'D:/vcpkg/installed/x64-windows/lib',
@@ -132,35 +116,53 @@ def get_library_dirs():
             if os.path.exists(path):
                 library_dirs.append(path)
         
-        # Check conda environment
         conda_prefix = os.environ.get('CONDA_PREFIX')
         if conda_prefix:
             conda_lib = os.path.join(conda_prefix, 'Library/lib')
             if os.path.exists(conda_lib):
                 library_dirs.append(conda_lib)
     
+    elif sys.platform == 'darwin':
+        # macOS: Homebrew library paths
+        brew_paths = [
+            '/opt/homebrew/lib',  # Apple Silicon
+            '/usr/local/lib',      # Intel
+        ]
+        for path in brew_paths:
+            if os.path.exists(path):
+                library_dirs.append(path)
+        
+        # Check conda environment
+        conda_prefix = os.environ.get('CONDA_PREFIX')
+        if conda_prefix:
+            conda_lib = os.path.join(conda_prefix, 'lib')
+            if os.path.exists(conda_lib):
+                library_dirs.append(conda_lib)
+    
+    # Linux: GMP/MPFR are in standard system paths
+    
     return library_dirs
 
 # Get CGAL include path
 cgal_include = get_cgal_include()
-if not cgal_include:
-    # Try to find CGAL using pkg-config on Linux
-    if sys.platform != 'win32':
-        try:
-            import subprocess
-            result = subprocess.run(
-                ['pkg-config', '--cflags-only-I', 'CGAL'],
-                capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                for flag in result.stdout.split():
-                    if flag.startswith('-I'):
-                        cgal_include = flag[2:]
-                        if os.path.exists(os.path.join(cgal_include, 'CGAL')):
-                            print(f"Found CGAL via pkg-config: {cgal_include}")
-                            break
-        except:
-            pass
+
+# Try pkg-config on Linux if CGAL not found
+if not cgal_include and sys.platform != 'win32':
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['pkg-config', '--cflags-only-I', 'CGAL'],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            for flag in result.stdout.split():
+                if flag.startswith('-I'):
+                    cgal_include = flag[2:]
+                    if os.path.exists(os.path.join(cgal_include, 'CGAL')):
+                        print(f"Found CGAL via pkg-config: {cgal_include}")
+                        break
+    except:
+        pass
 
 ext_modules = [
     Extension(
